@@ -36,7 +36,7 @@
 
     </style>
 </head> 
-	<body ontouchstart="tchmove(event)" onmousemove="move(event)">
+	<body ontouchmove="tchmove(event)" onmousemove="move(event)">
 		<p style="text-align: center">
 			<button onclick=newTable() ontouchstart=newTable()>
 				<img src="/cr" alt="" style="vertical-align:middle"> 
@@ -71,7 +71,7 @@
 			
 			
 			function newTable() {
-				roomId = (Math.random().toString(36)).substring(2);
+				roomId = (Math.random().toString(36)).substring(2,6);
 				alert('Вы создали комнату ' + roomId);
 				socket.emit('create table', roomId);
 			};
@@ -241,16 +241,16 @@
 				
 				if (Math.abs(x1 - x2) > Math.abs(y1 - y2)) {
 					if (x1 > x2)
-						gX = x1 - 1;
+						gX = x1 - 5;
 					else
-						gX = x1 + 1;
+						gX = x1 + 5;
 					gY = (((y2-y1)*(gX-x1))/(x2-x1))+y1;
 
 				} else {
 					if (y1 > y2)
-						gY = y1 - 1;
+						gY = y1 - 5;
 					else
-						gY = y1 + 1;
+						gY = y1 + 5;
 					gX = (((x2-x1)*(gY-y1))/(y2-y1))+x1;
 				};
 				cir.style.left = gX + p;
