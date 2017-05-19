@@ -1,0 +1,283 @@
+﻿<!doctype html>
+<html>
+  <head>
+    <script src="https://code.createjs.com/easeljs-0.8.0.min.js"> </script>
+    <script src="https://code.createjs.com/tweenjs-0.6.2.min.js"> </script>
+    <script src="https://cdn.socket.io/socket.io-1.2.0.js"> </script>
+    <title>Canvas Animation</title>
+    <style>
+			#canvas {			
+				border: solid 1px black;
+				cursor: none;
+			}
+			html {
+				height: 100%;
+				weight: 100%;
+			}
+			body {
+				height: 100%;
+				weight: 100%;
+				margin: 0px;		
+			}
+			div {
+				position: fixed;
+				border-radius: 50%;
+			}			
+			.circle.opacityT {
+				animation: mymove 500ms;
+				
+		    }
+			@keyframes mymove {
+					0%   {opacity: 1;
+					visibility: visible;}
+					100% {opacity: 0;
+					visibility: hidden;}
+			}
+
+    </style>
+</head> 
+	<body ontouchstart="tchmove(event)", onmousemove="move(event)">
+		<p style="text-align: center">
+			<button onclick=newTable()>
+				<img src="/cr" alt="" style="vertical-align:middle"> 
+				Создать комноту
+			</button>
+			<button onclick=connectTable()>
+				<img src="/con" alt="" style="vertical-align:middle"> 
+				Подключиться к комнате
+			</button>
+		</p>
+
+		<script>
+			var socket = io();
+
+			document.body.style.width = window.innerWidth - 50 + 'px'; 
+			document.body.style.height = window.innerHeight - 50 + 'px'; 	
+			
+			var circle;
+			var radius = getRandomInt(20, 50);
+			var color = 'rgba(' + getRandomInt(0,255) + ',' + getRandomInt(0,255) + ',' + getRandomInt(0,255) + ',1)';
+			var sprite = {
+				x: 0,
+				y: 0,
+				scaleX: 0,
+				scaleY: 0
+			};
+			var mouseX = 0;
+			var mouseY = 0;
+			var p = "px";
+			
+			var roomId = '';
+			
+			
+			function newTable() {
+				roomId = (Math.random().toString(36)).substring(2);
+				alert('Вы создали комнату ' + roomId);
+				socket.emit('create table', roomId);
+			};
+			
+			function connectTable() {
+				roomId = prompt("Введите ID комнаты", "");
+				if (roomId == null) 
+					return;
+				if (roomId != '' && roomId.indexOf(' ') < 0)
+					socket.emit('create table', roomId);
+				else
+					wrongTable();					
+			};
+			
+			function wrongTable() {
+				roomId = prompt("Неверно введен ID \nВведите ID комнаты", "");
+				if (roomId == null) 
+					return;
+				if (roomId != '' && roomId.indexOf(' ') < 0)
+					socket.emit('create table', roomId);
+				else
+					wrongTable();			
+			};
+			
+			socket.on('connecting', function(playerID) {
+				document.title = "RoomID: " + roomId;
+				document.body.innerHTML = "<div id='my' style='width: " + radius + p + "; height: " +  radius + p + "; background-color: " + color + "'></div>";
+				
+				var cir = document.getElementById('my');
+				cir.style.left = getRandomInt(0, window.innerWidth) - (radius/2) + p;
+				cir.style.top  = getRandomInt(0, window.innerHeight) - (radius/2) + p;	
+				
+				//Добавление управляемого объекта
+				mouseX = cir.style.left;
+				mouseY = cir.style.top;		
+				
+				//Добавление курсора
+				sprite.x = 0;
+				sprite.y = 0;
+				sprite.scaleX = 0.4;
+				sprite.scaleY = 0.4;
+				
+				//console.log('connecting room ' + roomId)
+				
+				socket.emit('connected', playerID, parseFloat(cir.style.left), parseFloat(cir.style.top), color, radius, sprite.x, sprite.y, roomId);
+			});
+						
+			//first loading of players
+			socket.on('show players', function(players) {
+				for (player in players)
+					if (roomId == players[player].room)
+						showPlayer(player, players[player].x, players[player].y, players[player].clr, players[player].r, players[player].xCur, players[player].yCur);
+			});
+			
+			//new player
+			socket.on('imready', function(ID, x, y, color, radius, xCur, yCur, room) {
+				console.log('imready pl: ' + roomId + ' get: ' + room);
+				if (roomId == room)
+					showPlayer(ID, x, y, color, radius, xCur, yCur);
+			});
+			
+			socket.on('player moved', function(playerID, x, y, room) {
+				console.log('player moved pl: ' + roomId + ' get: ' + room);
+				if (roomId == room) {
+					var cir = document.getElementById(playerID);
+					
+					cir.style.left = x + p;
+					cir.style.top  = y + p;	
+				}
+			});
+			
+			socket.on('create tail', function(playerID, x, y, color, radius, room) {
+				if (roomId == room) {
+						parent = document.getElementById('my');
+						let circle = document.createElement('div');				
+						circle.className = "circle opacityT"; 
+						circle.style.backgroundColor = color;
+						circle.style.width = radius + "px"; 
+						circle.style.height = radius + "px";
+								parent.appendChild(circle);
+						circle.style.left = x + 'px';
+						circle.style.top  = y + 'px';
+						circle.addEventListener("animationend", function() {
+							circle.remove();
+					});
+				}
+			});
+					
+			//player disconnected
+			socket.on('dis', function(playerID) {
+				let cir = document.getElementById(playerID);
+				cir.remove();
+			});		
+			
+			//socket.on('imoved', function(x, y){
+				//var d = new Date();
+				
+			//});							
+	
+			function showPlayer(ID, x, y, color, radius, xCur, yCur) {
+				console.log("show me: " + ID);
+				
+				document.body.innerHTML += "<div id='"+ ID + "' style='width: " + radius + p + "; height: " +  radius + p + "; background-color: " + color + "'></div>";
+				
+				window[ID] = radius;
+				
+				var cir = document.getElementById(ID);
+				
+				cir.style.left = x + p;
+				cir.style.top  = y + p;	
+			}
+
+			function CreateTail(X,Y, color, radius){
+				parent = document.getElementById('my');
+				let circle = document.createElement('div');				
+				circle.className = "circle opacityT"; 
+				circle.style.backgroundColor = color;
+				circle.style.width = radius + "px"; 
+				circle.style.height = radius + "px";
+						parent.appendChild(circle);
+				circle.style.left = X + p;
+				circle.style.top  = Y + p;
+				circle.addEventListener("animationend", function() {
+					circle.remove();
+				});
+			};
+		
+			function move(evt) {
+				var cir = document.getElementById('my');
+				let x1 = parseFloat(cir.style.left);
+				let y1 = parseFloat(cir.style.top);
+				let x2 = evt.pageX;
+				let y2 = evt.pageY;
+				let gX;
+				let gY;
+				
+				if (Math.abs(x1 - x2) > Math.abs(y1 - y2)) {
+					if (x1 > x2)
+						gX = x1 - 1;
+					else
+						gX = x1 + 1;
+					gY = (((y2-y1)*(gX-x1))/(x2-x1))+y1;
+
+				} else {
+					if (y1 > y2)
+						gY = y1 - 1;
+					else
+						gY = y1 + 1;
+					gX = (((x2-x1)*(gY-y1))/(y2-y1))+x1;
+				};
+				cir.style.left = gX + p;
+				cir.style.top = gY + p;
+
+				CreateTail(gX, gY, color, radius);
+				socket.emit('player moved', gX, gY);
+			};
+			
+			function tchmove(evt) {
+				event.preventDefault();
+				var cir = document.getElementById('my');
+				let x1 = parseFloat(cir.style.left);
+				let y1 = parseFloat(cir.style.top);
+				let x2 = evt.touches[0].pageX;
+				let y2 = evt.touches[0].pageY;
+				let gX;
+				let gY;
+				
+				if (Math.abs(x1 - x2) > Math.abs(y1 - y2)) {
+					if (x1 > x2)
+						gX = x1 - 1;
+					else
+						gX = x1 + 1;
+					gY = (((y2-y1)*(gX-x1))/(x2-x1))+y1;
+
+				} else {
+					if (y1 > y2)
+						gY = y1 - 1;
+					else
+						gY = y1 + 1;
+					gX = (((x2-x1)*(gY-y1))/(y2-y1))+x1;
+				};
+				cir.style.left = gX + p;
+				cir.style.top = gY + p;
+
+				CreateTail(gX, gY, color, radius);
+				socket.emit('player moved', gX, gY);
+			};
+			
+			function interval(a, b) 
+			{	
+				return ((a < (b + 10)) && (a > (b - 10)));
+			}
+			
+			function getRandomInt(min, max)			
+			{		
+				return Math.floor(Math.random() * (max - min + 1)) + min;		
+			}
+			
+			function getRandom(min, max)			
+			{		
+				return Math.random() * (max - min) + min;		
+			}
+			
+			
+			
+			
+    </script>
+  </body>
+</html>
