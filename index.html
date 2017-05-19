@@ -38,11 +38,11 @@
 </head> 
 	<body ontouchstart="tchmove(event)", onmousemove="move(event)">
 		<p style="text-align: center">
-			<button onclick=newTable()>
+			<button onclick=newTable(), ontouchstart=newTable()>
 				<img src="/cr" alt="" style="vertical-align:middle"> 
 				Создать комноту
 			</button>
-			<button onclick=connectTable()>
+			<button onclick=connectTable(), ontouchstart=connectTable()>
 				<img src="/con" alt="" style="vertical-align:middle"> 
 				Подключиться к комнате
 			</button>
